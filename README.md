@@ -24,12 +24,24 @@ A multi-agent research assistant that breaks down a question into sub-tasks, run
 
 ## Usage
 
+Start the bot in interactive mode:
+
 ```bash
-npx ts-node src/main.ts "your question here"
+npx ts-node src/main.ts [--verbose | --quiet]
 ```
 
-**Example:**
+Once running, type any research question at the `>` prompt and press Enter. The bot will process it and print the final report. You can ask multiple questions in the same session — the bot remembers previous research and uses it as context for follow-up queries. Press `Ctrl+C` to exit.
+
+| Flag | Output |
+|---|---|
+| *(none)* | Key lifecycle events — agent started/done, search queries, job progress, final report |
+| `--verbose` | Everything above plus bus traffic, raw payloads, and token counts |
+| `--quiet` | Final report only |
+
+**Examples:**
 
 ```bash
-npx ts-node src/main.ts "What are the latest trends in renewable energy?"
+npx ts-node src/main.ts
+npx ts-node src/main.ts --verbose
+npx ts-node src/main.ts --quiet
 ```
