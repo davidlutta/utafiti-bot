@@ -1,5 +1,5 @@
 import { BaseAgent } from "../base-agent";
-import { SYNTHESISER_PROMPT } from "../prompts/synthesizer.prompt";
+import { getSynthesizerPrompt } from "../prompts/synthesizer.prompt";
 import { SYNTHESIZER_NAME } from "../Constants";
 
 /**
@@ -13,7 +13,7 @@ export class SynthesizerAgent extends BaseAgent {
     constructor() {
         super(
             SYNTHESIZER_NAME,
-            SYNTHESISER_PROMPT,
+            getSynthesizerPrompt(),
             []
         );
     }

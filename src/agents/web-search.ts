@@ -1,6 +1,6 @@
 import { BaseAgent } from "../base-agent";
 import { WEB_SEARCH_NAME } from "../Constants";
-import { WEB_SEARCH_PROMPT } from "../prompts/search-web.prompt";
+import { getWebSearchPrompt } from "../prompts/search-web.prompt";
 import { searchTool } from "../tools/search-tool";
 
 /**
@@ -14,7 +14,7 @@ export class WebSearchAgent extends BaseAgent {
     constructor() {
         super(
             WEB_SEARCH_NAME,
-            WEB_SEARCH_PROMPT,
+            getWebSearchPrompt(),
             [searchTool]
         );
     }
