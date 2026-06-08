@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { ERROR_TYPE, RESULT_TYPE, TASK_TYPE } from "./Constants";
+import { logger } from "./logger";
 
 export type MessageType = typeof TASK_TYPE | typeof RESULT_TYPE | typeof ERROR_TYPE;
 
@@ -25,7 +26,7 @@ class MessageBus {
      * @param message - The message payload to deliver.
      */
     publish(channel: string, message: AgentMessage) {
-        console.log(`[bus] FromAgent:${message.fromAgent} → ToAgent:${message.toAgent} | ${message.type} | task:${message.taskId}`);
+        logger.verbose(`[bus] ${message.fromAgent} → ${message.toAgent} | ${message.type} | task:${message.taskId}`);
         this.emitter.emit(channel, message);
     }
 

@@ -2,6 +2,7 @@ import { OpenAI } from "openai";
 import { messageBus, AgentMessage } from "./message-bus";
 import { ASSISTANT_NAME, ERROR_TYPE, MODEL_NAME, ORCHESTRATOR_NAME, RESULT_TYPE, SYSTEM_NAME, TASK_TYPE, TOOL_NAME, USER_NAME } from "./Constants";
 import { client } from "./client";
+import { logger } from "./logger";
 
 export interface ToolDefinition {
     name: string;
@@ -27,7 +28,7 @@ export abstract class BaseAgent {
         this.tools = tools;
 
         messageBus.subscribe(this.name, (msg) => this.handleMessage(msg));
-        console.log(`[${this.name}] ready`);
+        logger.info(`[${this.name}] ready`);
     }
 
     /**
@@ -38,7 +39,8 @@ export abstract class BaseAgent {
     private async handleMessage(message: AgentMessage): Promise<void> {
         if (message.type !== TASK_TYPE) return;
 
-        console.log(`[${this.name}] Received taskId: ${message.taskId} \ntaskPayload:${message.payload}`);
+        logger.info(`[${this.name}] started`);
+        logger.verbose(`[${this.name}] taskId: ${message.taskId} | payload: ${JSON.stringify(message.payload)}`);
 
         try {
             const result = await this.runAgentLoop(message);
@@ -102,7 +104,8 @@ export abstract class BaseAgent {
 
             // If the model finished with a stop reason, return the content as final result.
             if (choice.finish_reason === "stop") {
-                console.log(`[${this.name}] done | tokens: ${response.usage?.total_tokens}`);
+                logger.info(`[${this.name}] done`);
+                logger.verbose(`[${this.name}] total tokens: ${response.usage?.total_tokens}`);
                 return choice.message.content ?? "";
             }
 
@@ -116,7 +119,7 @@ export abstract class BaseAgent {
 
                     const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
 
-                    console.log(`[${this.name}] calling tool: ${toolCall.function.name}`);
+                    logger.verbose(`[${this.name}] calling tool: ${toolCall.function.name}`);
                     const toolResult = await tool.run(args);
 
                     messages.push({
