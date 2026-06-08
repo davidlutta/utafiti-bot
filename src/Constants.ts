@@ -1,4 +1,5 @@
 export const MODEL_NAME = "gpt-4o-mini";
+export const MAX_HISTORY_TOKENS = 2000;
 
 // Agent identity constants
 export const ORCHESTRATOR_NAME = "orchestrator";
