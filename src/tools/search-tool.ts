@@ -21,7 +21,7 @@ export const searchTool: ToolDefinition = {
     }
 };
 
-async function searchWeb(query: string): Promise<string> {
+export async function searchWeb(query: string): Promise<string> {
     logger.info(`[${WEB_SEARCH_NAME}] searching: "${query}"`);
 
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=3`;

@@ -1,10 +1,12 @@
 import { messageBus, AgentMessage } from "./message-bus";
 import dotenv from "dotenv";
-import { COMPLETED_STATUS, ERROR_TYPE, MODEL_NAME, ORCHESTRATOR_NAME, PENDING_STATUS, RESULT_TYPE, SYNTHESIZER_NAME, TASK_TYPE } from "./Constants";
+import { COMPLETED_STATUS, DATA_ANALYST_NAME, ERROR_TYPE, MODEL_NAME, ORCHESTRATOR_NAME, PENDING_STATUS, RESULT_TYPE, SYNTHESIZER_NAME, TASK_TYPE, WEB_SEARCH_NAME } from "./Constants";
 import { client } from "./client";
 import { ORCHESTRATOR_PROMPT } from "./prompts/Orchestrator.prompt";
 import { logger } from "./logger";
 import { getMemoryContext } from "./memory";
+import { searchWeb } from "./tools/search-tool";
+
 dotenv.config();
 
 /** Structure of a sub-task for tracking purposes and what agent is responsible for it. */
@@ -64,10 +66,64 @@ async function decomposeUserQuery(query: string): Promise<SubTask[]> {
  * Dispatches each sub-task to its target agent via the message bus.
  * @param jobId - The parent job identifier used to namespace each task ID.
  * @param subTasks - The sub-tasks to distribute across agents.
+ * each sub task runs parallel but we are introducing a new sequential fan-out
+ * with dependancy pattern to allow us to collect web search results before the 
+ * data-analyst agent is called
  */
-function fanOutSubTasks(jobId: string, subTasks: SubTask[]): void {
-    subTasks.forEach((task, index) => {
-        task.taskId = `${jobId}:${task.agentType}:${index}`;
+async function fanOutSubTasks(jobId: string, subTasks: SubTask[]): Promise<void> {
+    const webSearchTasks = subTasks.filter((t) => t.agentType === WEB_SEARCH_NAME);
+    const dataAnalystTasks = subTasks.filter((t) => t.agentType === DATA_ANALYST_NAME);
+
+    const otherTasks = subTasks.filter((t) => t.agentType !== WEB_SEARCH_NAME && t.agentType !== DATA_ANALYST_NAME);
+
+    // Step 1: run web search and collect results
+    const webSearchResults: string[] = [];
+    await Promise.allSettled(
+        webSearchTasks.map(async (task, index) => {
+            task.taskId = `${jobId}:${task.agentType}:${index}`;
+            const result = await searchWeb(task.query);
+            webSearchResults.push(result);
+            task.status = COMPLETED_STATUS;
+            task.result = result;
+            logger.info(`[${ORCHESTRATOR_NAME}] web-search direct result collected`);
+        })
+    );
+
+    // If all sub-tasks were web-search (no data-analyst or other tasks)
+    // trigger synthesis immediately since no bus results are coming
+    const job = jobs.get(jobId);
+    if (job) {
+        const allDone = job.subTasks.every(
+            (t) => t.status === COMPLETED_STATUS || t.status === ERROR_TYPE
+        );
+
+        if (allDone) {
+            logger.info(`[${ORCHESTRATOR_NAME}] all tasks completed in wave 1 — synthesising`);
+            triggerSynthesis(jobId, job);
+        }
+    }
+
+    // Step 2: start the data-analyst with grounded web results injected
+    const groundedContext = webSearchResults.join("\n\n");
+    dataAnalystTasks.forEach((task, index) => {
+        task.taskId = `${jobId}:${task.agentType}:${webSearchTasks.length + index}`;
+
+        messageBus.publish(task.agentType, {
+            taskId: task.taskId,
+            fromAgent: ORCHESTRATOR_NAME,
+            toAgent: task.agentType,
+            type: TASK_TYPE,
+            payload: {
+                query: task.query,
+                groundedContext
+            },
+            timestamp: Date.now(),
+        })
+    });
+
+    // Step 3: do everything else in parallel.
+    otherTasks.forEach((task, index) => {
+        task.taskId = `${jobId}:${task.agentType}:${webSearchTasks.length + dataAnalystTasks.length + index}`;
 
         messageBus.publish(task.agentType, {
             taskId: task.taskId,
@@ -75,7 +131,7 @@ function fanOutSubTasks(jobId: string, subTasks: SubTask[]): void {
             toAgent: task.agentType,
             type: TASK_TYPE,
             payload: { query: task.query },
-            timestamp: Date.now(),
+            timestamp: Date.now()
         });
     });
 }
@@ -154,7 +210,7 @@ export async function runJob(
     const handler = async (message: AgentMessage) => {
         if (message.fromAgent === SYNTHESIZER_NAME) {
             logger.output("\n[FINAL REPORT]\n");
-            logger.output(String(message.payload));
+            logger.output(String(message.payload) + "\n\n");
 
             messageBus.unsubscribe(ORCHESTRATOR_NAME, handler);
 

@@ -1,5 +1,5 @@
 import { BaseAgent } from "../base-agent";
-import { DATA_ANALYST_PROMPT } from "../prompts/data-analyst.prompt";
+import { getDataAnalystPrompt } from "../prompts/data-analyst.prompt";
 import { DATA_ANALYST_NAME } from "../Constants";
 
 /**
@@ -13,7 +13,7 @@ export class DataAnalystAgent extends BaseAgent {
     constructor() {
         super(
             DATA_ANALYST_NAME,
-            DATA_ANALYST_PROMPT,
+            getDataAnalystPrompt(),
             []
         );
     }
