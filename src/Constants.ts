@@ -21,3 +21,9 @@ export const FAILED_STATUS = "FAILED";
 export const TASK_TYPE = "TASK";
 export const RESULT_TYPE = "RESULT";
 export const ERROR_TYPE = "ERROR";
+
+// Database
+export const DATABASE_FILE_NAME = "utafiti-data.json"
+export const SESSIONS_NAME = "sessions";
+export const MESSAGES_NAME = "messages";
+export const UPDATED_AT_NAME = "updated_at;"
